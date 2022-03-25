@@ -14,8 +14,8 @@ def short():
     if request.method != 'POST':
         return make_response(jsonify(onlyPost), 400)
     url = request.get_json()
-    if not url:
-        return make_response(jsonify(missingUrl), 403)
+    if not checkUrl(url['url']):
+        return make_response(jsonify(notURL), 403)
     hashId = writeInDatabase(url['url'])
     message = {
         'message': 'success',

@@ -9,3 +9,7 @@ missingUrl = {
 onlyPost = {
     'message': 'Incorrect method.'
 }
+
+notURL = {
+    'message': 'Incorrect input.'
+}
