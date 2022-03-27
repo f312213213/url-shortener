@@ -13,3 +13,7 @@ onlyPost = {
 notURL = {
     'message': 'Incorrect input.'
 }
+
+duplicateCustomName = {
+    'message': 'Duplicate customName input.'
+}

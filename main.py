@@ -1,9 +1,10 @@
-from flask import Flask, redirect, make_response, jsonify, request
+from flask import Flask, request
 from flask_cors import cross_origin
 
 
 from functions import *
 from ERROR import *
+from response import *
 
 app = Flask(__name__)
 
@@ -12,16 +13,27 @@ app = Flask(__name__)
 @cross_origin()
 def short():
     if request.method != 'POST':
-        return make_response(jsonify(onlyPost), 400)
-    url = request.get_json()
-    if not checkUrl(url['url']):
-        return make_response(jsonify(notURL), 403)
-    hashId = writeInDatabase(url['url'])
+        return response(onlyPost, 405)
+    data = request.get_json()
+    if not checkUrl(data['url']):
+        return response(notURL, 403)
+    if len(data['customName']) > 0:
+        try:
+            customName = writeInDatabase(data['url'], data['customName'])
+            message = {
+                'message': 'success',
+                'shorted': customName
+            }
+            return response(message, 200)
+        except pymysql.err.IntegrityError:
+            return response(duplicateCustomName, 406)
+
+    hashId = writeInDatabase(data['url'])
     message = {
         'message': 'success',
-        'hashId': hashId
+        'shorted': hashId
     }
-    return make_response(jsonify(message), 200)
+    return response(message, 200)
 
 
 @app.route('/<shortText>', methods=['GET'])
@@ -32,8 +44,8 @@ def resolveShortText(shortText):
         message = {
             'originURL': url
         }
-        return make_response(jsonify(message), 200)
-    return make_response(jsonify(urlNotFound), 404)
+        return response(message, 200)
+    return response(urlNotFound, 404)
 
 
 if __name__ == '__main__':
