@@ -17,7 +17,7 @@ def short():
     data = request.get_json()
     if not checkUrl(data['url']):
         return response(notURL, 403)
-    if len(data['customName']) > 0:
+    if 'customName' in data:
         try:
             customName = writeInDatabase(data['url'], data['customName'])
             message = {
@@ -28,24 +28,38 @@ def short():
         except pymysql.err.IntegrityError:
             return response(duplicateCustomName, 406)
 
-    hashId = writeInDatabase(data['url'])
-    message = {
-        'message': 'success',
-        'shorted': hashId
-    }
-    return response(message, 200)
+    try:
+        hashId = writeInDatabase(data['url'])
+        message = {
+            'message': 'success',
+            'shorted': hashId
+        }
+        return response(message, 200)
+    except pymysql.err.IntegrityError:
+        return response(duplicateCustomName, 406)
 
 
 @app.route('/<shortText>', methods=['GET'])
 @cross_origin()
 def resolveShortText(shortText):
-    url = checkIdInDatabase(shortText)
-    if url:
-        message = {
-            'originURL': url
-        }
-        return response(message, 200)
-    return response(urlNotFound, 404)
+    urlInDatabase = checkIdInDatabase(shortText)
+    if urlInDatabase is None:
+        return response(urlNotFound, 404)
+    meta = getWebMeta(urlInDatabase)
+    message = {
+        'originURL': urlInDatabase,
+        'meta': meta
+    }
+    return response(message, 200)
+
+
+@app.route('/', methods=['GET'])
+@cross_origin()
+def index():
+    message = {
+        'message': 'This is the base url of this URL Shortener api.'
+    }
+    return response(message, 200)
 
 
 if __name__ == '__main__':
