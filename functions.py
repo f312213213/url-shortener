@@ -1,16 +1,28 @@
+import json
 import pymysql
+import requests
+import configparser
+from flask import jsonify
 from hashids import Hashids
 from validators import url
-import requests
 from bs4 import BeautifulSoup
 
-hashids = Hashids(min_length=6, salt='y1234567890we23456u2h21fbqlkef3323456789v4g8786jh1k00787l')
-db = pymysql.connect()
+cf = configparser.ConfigParser()
+cf.read("config.ini")
+
+hashids = Hashids(min_length=6, salt=cf.get("HASH", "salt"))
 
 
 def checkIdInDatabase(shortText):
+    db = pymysql.connect(
+        host=cf.get("DATABASE", "host"),
+        port=int(cf.get("DATABASE", "port")),
+        user=cf.get("DATABASE", "user"),
+        passwd=cf.get("DATABASE", "passwd"),
+        db=cf.get("DATABASE", "db")
+    )
     connection = db.cursor()
-    connection.execute('SELECT original_url, clicks FROM urls WHERE hash_id = (%s) OR custom_name = (%s)',
+    connection.execute('SELECT original_url, clicks FROM urls_table WHERE hash_id = (%s) OR custom_name = (%s)',
                        (shortText, shortText)
                        )
     url_data = connection.fetchone()
@@ -18,7 +30,7 @@ def checkIdInDatabase(shortText):
     if url_data:
         original_url = url_data[0]
         clicks = url_data[1]
-        connection.execute('UPDATE urls SET clicks = (%s) WHERE hash_id = (%s) OR custom_name = (%s)',
+        connection.execute('UPDATE urls_table SET clicks = (%s) WHERE hash_id = (%s) OR custom_name = (%s)',
                            (clicks + 1, shortText, shortText)
                            )
         db.commit()
@@ -28,21 +40,28 @@ def checkIdInDatabase(shortText):
         return None
 
 
-def writeInDatabase(urlInput, customName=None):
+def writeInDatabase(urlInput, userUid, customName=None):
+    db = pymysql.connect(
+        host=cf.get("DATABASE", "host"),
+        port=int(cf.get("DATABASE", "port")),
+        user=cf.get("DATABASE", "user"),
+        passwd=cf.get("DATABASE", "passwd"),
+        db=cf.get("DATABASE", "db")
+    )
     connection = db.cursor()
     if customName:
-        connection.execute('INSERT INTO urls (original_url, custom_name) VALUES (%s, %s)',
-                           (urlInput, customName)
+        connection.execute('INSERT INTO urls_table (original_url, custom_name, user_uid) VALUES (%s, %s, %s)',
+                           (urlInput, customName, userUid)
                            )
         db.commit()
         connection.close()
         return customName
-    connection.execute('INSERT INTO urls (original_url) VALUES (%s)',
-                       (urlInput,)
+    connection.execute('INSERT INTO urls_table (original_url, user_uid) VALUES (%s, %s)',
+                       (urlInput, userUid)
                        )
     rowId = connection.lastrowid
     hashId = hashids.encode(rowId)
-    connection.execute('UPDATE urls SET hash_id = (%s) WHERE id = (%s)',
+    connection.execute('UPDATE urls_table SET hash_id = (%s) WHERE id = (%s)',
                        (hashId, rowId)
                        )
     db.commit()
@@ -63,6 +82,42 @@ def getWebMeta(weburl):
         retO['description'] = meta_tag['content']
     return retO
 
+
+def getUserRecordFromDB(userUid):
+    db = pymysql.connect(
+        host=cf.get("DATABASE", "host"),
+        port=int(cf.get("DATABASE", "port")),
+        user=cf.get("DATABASE", "user"),
+        passwd=cf.get("DATABASE", "passwd"),
+        db=cf.get("DATABASE", "db")
+    )
+    connection = db.cursor()
+    connection.execute('SELECT * FROM urls_table WHERE user_uid = (%s)', userUid)
+    row_headers = [x[0] for x in connection.description]
+    rv = connection.fetchall()
+    json_data = []
+    for result in rv:
+        json_data.append(dict(zip(row_headers, result)))
+    connection.close()
+    return json.dumps(json_data, sort_keys=True, default=str)
+
+
+def createUserInDB(userUid, userName):
+    try:
+        db = pymysql.connect(
+            host=cf.get("DATABASE", "host"),
+            port=int(cf.get("DATABASE", "port")),
+            user=cf.get("DATABASE", "user"),
+            passwd=cf.get("DATABASE", "passwd"),
+            db=cf.get("DATABASE", "db")
+        )
+        connection = db.cursor()
+        connection.execute('INSERT INTO user_table (user_name, uid) VALUES (%s, %s)', (userName, userUid))
+        db.commit()
+        connection.close()
+        return 'user create'
+    except:
+        return 'user already create'
 
 def checkUrl(userInput):
     return url(userInput)

@@ -19,7 +19,7 @@ def short():
         return response(notURL, 403)
     if 'customName' in data:
         try:
-            customName = writeInDatabase(data['url'], data['customName'])
+            customName = writeInDatabase(urlInput=data['url'], userUid=data['uid'], customName=data['customName'])
             message = {
                 'message': 'success',
                 'shorted': customName
@@ -29,7 +29,7 @@ def short():
             return response(duplicateCustomName, 406)
 
     try:
-        hashId = writeInDatabase(data['url'])
+        hashId = writeInDatabase(urlInput=data['url'], userUid=data['uid'])
         message = {
             'message': 'success',
             'shorted': hashId
@@ -49,6 +49,27 @@ def resolveShortText(shortText):
     message = {
         'originURL': urlInDatabase,
         'meta': meta
+    }
+    return response(message, 200)
+
+
+@app.route('/record/<userID>', methods=['GET'])
+@cross_origin()
+def getUserRecord(userID):
+    urlData = getUserRecordFromDB(userID)
+    message = {
+        'urlData': urlData
+    }
+    return response(message, 200)
+
+
+@app.route('/create', methods=['POST'])
+@cross_origin()
+def createUser():
+    data = request.get_json()
+    responseText = createUserInDB(data['uid'], data['userName'])
+    message = {
+        'msg': responseText
     }
     return response(message, 200)
 
