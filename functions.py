@@ -13,7 +13,7 @@ cf.read("config.ini")
 hashids = Hashids(min_length=6, salt=cf.get("HASH", "salt"))
 
 
-def checkIdInDatabase(shortText):
+def connectToDB():
     db = pymysql.connect(
         host=cf.get("DATABASE", "host"),
         port=int(cf.get("DATABASE", "port")),
@@ -21,6 +21,11 @@ def checkIdInDatabase(shortText):
         passwd=cf.get("DATABASE", "passwd"),
         db=cf.get("DATABASE", "db")
     )
+    return db
+
+
+def checkIdInDatabase(shortText):
+    db = connectToDB()
     connection = db.cursor()
     connection.execute('SELECT original_url, clicks FROM urls_table WHERE hash_id = (%s) OR custom_name = (%s)',
                        (shortText, shortText)
@@ -41,13 +46,7 @@ def checkIdInDatabase(shortText):
 
 
 def writeInDatabase(urlInput, userUid, customName=None):
-    db = pymysql.connect(
-        host=cf.get("DATABASE", "host"),
-        port=int(cf.get("DATABASE", "port")),
-        user=cf.get("DATABASE", "user"),
-        passwd=cf.get("DATABASE", "passwd"),
-        db=cf.get("DATABASE", "db")
-    )
+    db = connectToDB()
     connection = db.cursor()
     if customName:
         connection.execute('INSERT INTO urls_table (original_url, custom_name, user_uid) VALUES (%s, %s, %s)',
@@ -84,13 +83,7 @@ def getWebMeta(weburl):
 
 
 def getUserRecordFromDB(userUid):
-    db = pymysql.connect(
-        host=cf.get("DATABASE", "host"),
-        port=int(cf.get("DATABASE", "port")),
-        user=cf.get("DATABASE", "user"),
-        passwd=cf.get("DATABASE", "passwd"),
-        db=cf.get("DATABASE", "db")
-    )
+    db = connectToDB()
     connection = db.cursor()
     connection.execute('SELECT * FROM urls_table WHERE user_uid = (%s)', userUid)
     row_headers = [x[0] for x in connection.description]
@@ -104,13 +97,7 @@ def getUserRecordFromDB(userUid):
 
 def createUserInDB(userUid, userName):
     try:
-        db = pymysql.connect(
-            host=cf.get("DATABASE", "host"),
-            port=int(cf.get("DATABASE", "port")),
-            user=cf.get("DATABASE", "user"),
-            passwd=cf.get("DATABASE", "passwd"),
-            db=cf.get("DATABASE", "db")
-        )
+        db = connectToDB()
         connection = db.cursor()
         connection.execute('INSERT INTO user_table (user_name, uid) VALUES (%s, %s)', (userName, userUid))
         db.commit()
@@ -118,6 +105,7 @@ def createUserInDB(userUid, userName):
         return 'user create'
     except:
         return 'user already create'
+
 
 def checkUrl(userInput):
     return url(userInput)

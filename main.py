@@ -14,6 +14,8 @@ app = Flask(__name__)
 def short():
     if request.method != 'POST':
         return response(onlyPost, 405)
+    if 'uid' not in request.headers:
+        return response(urlNotFound, 404)
     data = request.get_json()
     if not checkUrl(data['url']):
         return response(notURL, 403)
@@ -56,6 +58,8 @@ def resolveShortText(shortText):
 @app.route('/record/<userID>', methods=['GET'])
 @cross_origin()
 def getUserRecord(userID):
+    if 'uid' not in request.headers or userID != request.headers['uid']:
+        return response(urlNotFound, 404)
     urlData = getUserRecordFromDB(userID)
     message = {
         'urlData': urlData
