@@ -2,7 +2,7 @@ import json
 import pymysql
 import requests
 import configparser
-from flask import jsonify
+
 from hashids import Hashids
 from validators import url
 from bs4 import BeautifulSoup
