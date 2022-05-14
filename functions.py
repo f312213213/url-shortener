@@ -19,7 +19,8 @@ def connectToDB():
         port=int(cf.get("DATABASE", "port")),
         user=cf.get("DATABASE", "user"),
         passwd=cf.get("DATABASE", "passwd"),
-        db=cf.get("DATABASE", "db")
+        db=cf.get("DATABASE", "db"),
+        ssl_ca='/etc/ssl/cert.pem'
     )
     return db
 
@@ -99,7 +100,7 @@ def createUserInDB(userUid, userName):
     try:
         db = connectToDB()
         connection = db.cursor()
-        connection.execute('INSERT INTO user_table (user_name, uid) VALUES (%s, %s)', (userName, userUid))
+        connection.execute('INSERT INTO users_table (user_name, uid) VALUES (%s, %s)', (userName, userUid))
         db.commit()
         connection.close()
         return 'user create'
